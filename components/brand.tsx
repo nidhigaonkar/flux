@@ -1,0 +1,3 @@
+import { BRAND } from '@/lib/branding';
+export function Brand({small=false}:{small?:boolean}){return <span className={`brand ${small?'brand-small':''}`}><span className="brand-symbol"><i/><i/><i/></span>{BRAND.name}</span>}
+export function ProviderLogo({provider,size=36}:{provider:string;size?:number}){return <span style={{width:size,height:size}} className={`provider-logo ${provider}`}>{provider==='coinbase'?<span className="coinbase-mark"/>:provider==='crossmint'?<span className="crossmint-mark">✳</span>:<img className="link-logo-image" src="/providers/link.png" alt="Link" width={size} height={size}/>}</span>}
