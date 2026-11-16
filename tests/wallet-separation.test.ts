@@ -1,0 +1,23 @@
+import {test,after} from 'node:test';
+import assert from 'node:assert/strict';
+import {database,setupWallet,listWorkspaceWallets,createAgent,getAgent,attachWallet,detachWallet} from '../lib/db';
+process.env.DATABASE_PATH='memory://';
+after(async()=>{await (await database()).close()});
+test('wallets exist independently, can be shared, and survive detach with owner isolation',async()=>{
+ await setupWallet('owner','wallet-1','coinbase','Research budget','success');
+ assert.equal((await listWorkspaceWallets('owner')).length,1);
+ const a=await createAgent('owner','First','');const b=await createAgent('owner','Second','');
+ assert.equal(a.wallets.length,0);
+ await Promise.all([attachWallet('owner',a.id,'wallet-1'),attachWallet('owner',a.id,'wallet-1')]);
+ await attachWallet('owner',b.id,'wallet-1');
+ assert.equal((await getAgent('owner',a.id))!.wallets.length,1);
+ await detachWallet('owner',a.id,'wallet-1');
+ assert.equal((await getAgent('owner',a.id))!.wallets.length,0);
+ assert.equal((await getAgent('owner',b.id))!.wallets.length,1);
+ assert.equal((await listWorkspaceWallets('owner')).length,1);
+ assert.equal((await listWorkspaceWallets('other')).length,0);
+ await assert.rejects(attachWallet('other',a.id,'wallet-1'));
+ const other=await createAgent('other','Other','');await assert.rejects(attachWallet('other',other.id,'wallet-1'));
+ await setupWallet('owner','pending','link','Pending Link','pending');await assert.rejects(attachWallet('owner',a.id,'pending'));
+ await setupWallet('owner','wallet-1','coinbase','Duplicate','success');assert.equal((await listWorkspaceWallets('owner')).length,2);
+});

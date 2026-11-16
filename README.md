@@ -16,7 +16,9 @@ Open http://localhost:3000. The landing page links to `/dashboard` and `/agents/
 
 ## Try the product
 
-Open the dashboard to create an isolated demo workspace and sample research assistant. Create an agent, select any combination of providers, simulate connections, and review the result. The Connect step includes successful, pending, and failed demo scenarios. Retry failures or simulate approval without losing successful connections. Refresh the browser to resume the current step through the agent’s URL. Open the agent to refresh status, read funding guidance, copy safe identifiers, export JSON, or disconnect locally with confirmation.
+Open Wallet Setup (`/setup`) to select providers, label wallets, and simulate success, pending authorization, or failure. These are workspace records and do not create agents. Finish pending setup or retry failures from the wallet list.
+
+Create agents separately at `/agents/new`. On Connections (`/connections`), choose an agent and attach existing ready wallets. A wallet can be attached to multiple agents. Detaching removes only the selected assignment and preserves the workspace wallet and other assignments. All state persists across refreshes. Existing demo wallets and assignments are migrated automatically by `db/migrations/002_workspace_wallets.sql`.
 
 The export modal includes a readable JSON preview, clipboard copy, download, and a Node.js example. Demo exports explicitly identify simulated data and do not authorize spending.
 
