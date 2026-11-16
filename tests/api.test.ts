@@ -14,7 +14,7 @@ test('API validates inputs, enforces same origin and ownership, and disables pro
  assert.equal((await POST(request({action:'create',name:'a'},cookie,null))).status,403);
  assert.equal((await POST(request({action:'create',name:'a'},cookie,'malformed'))).status,403);
  const created=await POST(request({action:'create',name:'API agent'},cookie));assert.equal(created.status,200);const {agent}=await created.json();
- assert.equal((await POST(request({action:'connect',id:agent.id,provider:'coinbase'},'wallet_demo_session=another-owner'))).status,404);
+ assert.equal((await POST(request({action:'connect',id:agent.id,provider:'coinbase'},'wallet_demo_session=00000000-0000-4000-8000-000000000001'))).status,404);
  const resumed=await GET(new NextRequest('http://localhost:3000/api/workspace',{headers:{cookie}}));assert.ok((await resumed.json()).agents.some((a:{id:string})=>a.id===agent.id));
  Object.assign(process.env,{NODE_ENV:'production'});assert.equal((await GET(new NextRequest('http://localhost:3000/api/workspace'))).status,503);assert.equal((await POST(request({action:'create',name:'blocked'},cookie))).status,503);Object.assign(process.env,{NODE_ENV:'test'});
 });

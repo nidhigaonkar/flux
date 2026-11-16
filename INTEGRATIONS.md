@@ -1,51 +1,62 @@
-# Provider integration notes
+# Integration notes
 
-Official documentation inspected November 15, 2026. No real credentials were used, no wallet was provisioned, and no user account was authorized.
+Official sources inspected November 15, 2026. No real credentials or user accounts were used during development.
 
-## Implemented dependencies
+## Link — implemented backend
 
-- Next.js 15.5.29, React 19.3.1, Zod 3.25.76
-- `@electric-sql/pglite` 0.5.16 (local PostgreSQL)
-- No provider SDK is installed. No provider API method or endpoint is called in this build.
+Official references:
+- https://docs.link.com/authentication/oauth
+- https://docs.link.com/guides/add-payments-to-your-agent
+- https://docs.link.com/sdks/typescript
+- https://github.com/stripe/link-cli/tree/main/packages/sdk
 
-## Coinbase
+Packages: `@stripe/link-sdk` 3.1.0 and `next-auth` 5.0.0-beta.32 (Auth.js, GitHub provider). The application is ESM, as required by the Link SDK.
 
-Official source: https://docs.cdp.coinbase.com/wallets/quickstart/api-key-auth
-Official SDK: https://github.com/coinbase/cdp-sdk
+Implemented: confidential-client OAuth with PKCE and a provider-hosted authorization surface; single-use expiring state bound to authenticated owner and HttpOnly browser cookie; exact registered callback; server-only exchange; scope validation; encrypted access/refresh tokens; transactionally serialized refresh with atomic rotated-token storage; read-only SDK method listing reduced to an eligibility count; provider revocation and local token deletion only after confirmation; account and agent-assignment status; safe configuration export. Link grants are stored independently of agents.
 
-The current documentation calls the API-key path **API Key Wallet**, under CDP non-custodial wallets. The server controls accounts while CDP secures private keys in a TEE. This should not be labeled an Agentic Wallet authorization integration. Required configuration is a CDP API key ID, API key secret, and Wallet Secret. Official documentation demonstrates EVM account creation, named account retrieval, and Base Sepolia testnet funding.
+Authentication uses Auth.js GitHub OAuth, then Link authorization requests only `payment_methods.agentic`. No passwords, OTPs, card numbers, session cookies, purchase requests, payment credentials, or financial-insights scopes are collected. The SDK's read response is not returned to the browser or persisted; only the number of eligible methods is saved. No Link account balance or spending limit is fabricated.
 
-Implemented: deterministic simulated address and test USDC string, status, network metadata, setup/retry/refresh/disconnect, and guidance linking to official documentation.
+Requirements: a registered Link confidential client (application through Stripe's form in the OAuth guide), Stripe publishable key, exact redirect URI, Auth.js/GitHub configuration, and a 32-byte encryption key. Use HTTPS in production. The actual hosted account environment is shown as production; no payment is executed. The documented US/Canada payment eligibility restriction applies.
 
-Blocked: live credential validation, provisioning/reconciliation, balances, and authenticated owner credential storage. The app does not accept CDP credentials. No mainnet creation is possible.
+Errors are sanitized. Token response bodies and ciphertext never appear in safe status or exported configurations. Refresh errors with uncertain rotation stop automatic retries. Unconfirmed revocation is retained as an actionable status. Disconnecting Link revokes the provider grant and detaches agent assignments after provider confirmation; detaching a single agent does not revoke Link access.
 
-## Crossmint
+Verified using mocked HTTP responses and an in-memory database: URL parameters, PKCE, owner/browser state checks, single use, expiry, denial, scope validation, authenticated encryption, owner isolation, live/demo separation, SDK status reads, serialized refresh rotation, revocation, and safe responses. **Not verified against live Link or GitHub accounts.** No registered credentials are present.
 
-Official reference: https://github.com/Crossmint/wallets-server-quickstart
-Official docs: https://docs.crossmint.com/wallets/overview
-Official SDK repository: https://github.com/Crossmint/crossmint-sdk
+## Coinbase — real API Key Wallet setup, Base Sepolia reads
 
-The official server quickstart documents `@crossmint/wallets-sdk` 1.0.7 and Base Sepolia. The chosen future ownership model is server recovery signer plus server operational signer: the application server controls both, without fabricating user identities. Staging API access and both signer secrets are required. The quickstart lists wallet create/read/balance scopes as well as transaction/sign/funding scopes used by its broader example. This MVP must request only the scopes necessary for the operations actually enabled.
+Official sources: https://docs.cdp.coinbase.com/wallets/quickstart/api-key-auth and https://github.com/coinbase/cdp-sdk
 
-Implemented: deterministic simulated address and test USDC balance string; separate staging metadata and lifecycle actions. Coinbase and Crossmint both document Base Sepolia in the referenced quickstarts, so the demo uses that overlap. The token quantities are examples, not a claim of provider-wide token compatibility.
+Installed `@coinbase/cdp-sdk` 1.62.0. Implements named account lookup and get-or-create, read-only credential testing, and paginated Base Sepolia token balances using integer base units converted to precise decimal strings. It does not connect a Coinbase exchange/consumer account or implement Agentic Wallet authorization.
 
-Blocked: real staging provisioning, signer construction and secure secret storage, provider read validation, and wallet reconciliation. SDK not installed or live-tested.
+Requires server-side `CDP_API_KEY_ID`, `CDP_API_KEY_SECRET`, and `CDP_WALLET_SECRET`. Read-access testing cannot validate the Wallet Secret or prove provisioning permission. EVM accounts are network-agnostic: creating an account does not constrain the resulting address to a single chain. Flux hardcodes Base Sepolia for all balance reads and funding guidance, exposes no mainnet selection or transaction API, and explicitly explains this address distinction. No automatic funding is performed.
 
-## Stripe Link
+## Crossmint — real staging server wallets
 
-Official hosted guide: https://docs.link.com/guides/add-payments-to-your-agent
-Official OAuth guide: https://docs.link.com/authentication/oauth
-Official SDK/CLI repository: https://github.com/stripe/link-cli
-Official agent CLI quickstart: https://docs.link.com/quickstart/agents
+Official sources:
+- https://github.com/Crossmint/wallets-server-quickstart
+- https://docs.crossmint.com/api-reference/wallets/create-wallet
+- https://docs.crossmint.com/api-reference/wallets/get-wallet-by-locator
+- https://docs.crossmint.com/wallets/concepts/wallet-locators
+- https://help.crossmint.com/articles/2804023362-how-do-i-get-production-access-to-crossmint
 
-Current documentation supports hosted OAuth, not just a local CLI. It lists a registered confidential client, Stripe publishable key, exact registered callback, server session storage, and secure token storage as prerequisites. The hosted guide names `@stripe/link-sdk`, the `payment_methods.agentic` scope, state validation, and PKCE. Stripe secret API keys do not authenticate the Link API. Token acquisition and rotation belong to the application, not the SDK.
+Installed `@crossmint/wallets-sdk` 1.0.7, matching the official server quickstart. Uses `createWallet({chain:'base-sepolia', owner, alias, recovery, signers})`, verified against the installed SDK declarations and implementation. Recovery and operational signers are server-controlled. Each wallet derives unique signer secrets via HMAC from separate server master secrets; neither derived nor master secrets are sent to the browser or saved in wallet metadata. Keep master secrets stable; rotating them without a signer migration can lose access.
 
-Implemented: a distinct linked payment account demo, simulated authorization/pending/failure/approval, no blockchain address, no crypto balance, no invented spending limit.
+The owner is the authenticated user's actual Flux user ID (`userId:<owner>`), not a fabricated email or user. A stable alias scopes each setup operation. Reconciliation uses the documented owner/alias locator with a read-only GET to the fixed staging API host. A 404 alone does not authorize a second creation after an unknown outcome.
 
-Blocked: no registered OAuth client or production authentication exists in this build. No live authorization URL is generated, callback accepted, or token exchanged. Provider settings honestly show these prerequisites. We do not run a shared authenticated CLI session, collect OTPs/passwords/card numbers/cookies, or label any live account connected. All Link examples are simulated.
+Only `sk_staging_` server keys are accepted. Set `CROSSMINT_SERVER_API_KEY`, `CROSSMINT_RECOVERY_SIGNER_SECRET`, and `CROSSMINT_WALLET_SIGNER_SECRET`. Both signer secrets are 64 hex characters. Wallet create/read/balance scopes are needed; additional signer registration permissions may be required by the project's SDK signing model. Read tests check access only and do not create wallets. Production keys, mainnet selection, transfers, and automated funding are disabled. Staging is self-service; production currently needs enterprise onboarding and business verification.
 
-## Security/verification limits
+Crossmint balances preserve the provider's native, USDC, and requested USDXM test-token quantities as decimal strings. Coinbase and Crossmint are not assumed to use the same test stablecoin.
 
-Production APIs return 503. The local opaque cookie provides isolation between demo workspaces, not a supported production identity system. Credential encryption and OAuth token lifecycle code are deliberately absent because live access is disabled. Before enabling live mode, use a supported authentication library, encrypted token/credential store, exact callback configuration, durable distributed limits, mock-backed adapter tests, idempotency keys, and reconciliation for unknown provisioning outcomes.
+## Crypto reliability and verification
 
-No live capability has been verified. All successful operations in this application are demo operations. Payment routing, execution, swaps, purchases, monetization, and mainnet provisioning are outside this build.
+`crypto_operations` persists stable operation identifiers, provider-specific names/aliases, a provisioning lease, sanitized error codes, and creation state. Concurrent duplicate requests share one operation. Unknown outcomes permit lookup/reconciliation only; they do not blindly recreate. Known preflight/authentication failures can retry after lookup. Completed providers survive another provider's failure. Balance-read failures retain prior quantities with an explicit failed-refresh status.
+
+All crypto mutations require an Auth.js session, same-origin checks, and persistent per-owner rate limits. Link client registration is not required for crypto endpoints. SDK secrets are environment-only and are not exported or accepted in browser requests. Wallets are real provider records when credentials are supplied, while network/environment metadata explicitly identifies testnet/staging.
+
+Verified with mocked adapters and an in-memory database: duplicate/concurrent provisioning, unknown-outcome reconciliation, partial failure, owner isolation, decimal precision, failed refresh preservation, staging-only key guards, official Crossmint lookup host/locator, and persistent rate limiting. SDK calls compile against the installed packages. No real Coinbase or Crossmint provider call was made; credentials are not configured. Production remains disabled.
+
+## Deployment boundary
+
+PGlite 0.5.16 is filesystem-backed and supports the current single-process Node.js deployment. A hosted PostgreSQL connection is still needed for multiple app instances. JWT sessions use Auth.js and live endpoints fail closed if auth or encryption configuration is absent. Local legacy demo sessions accept only UUID identifiers, so they cannot impersonate GitHub owner IDs if live configuration is later removed.
+
+Payment execution, spending requests, routing, swaps, purchases, automatic funding, and monetization remain outside scope.

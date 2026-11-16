@@ -1,0 +1,8 @@
+export type CryptoProvider='coinbase'|'crossmint';
+export const NETWORK='base-sepolia' as const;
+export type TokenBalance={symbol:string;amount:string;decimals?:number;contractAddress?:string};
+export class CryptoError extends Error{constructor(public code:string,public status=400,public retryAfter?:string){super(code)}}
+export type Adapter={find:(owner:string,id:string)=>Promise<string|null>;create:(owner:string,id:string)=>Promise<string>;balances:(address:string)=>Promise<TokenBalance[]>;test:()=>Promise<void>};
+export function normalizeError(error:unknown){if(error instanceof CryptoError)return error;const e=error as {status?:number;statusCode?:number;httpStatusCode?:number;response?:{status?:number;headers?:Record<string,string>}};const status=e?.status??e?.statusCode??e?.httpStatusCode??e?.response?.status;return new CryptoError(status===401||status===403?'invalid_credentials':status===429?'rate_limited':'provider_unavailable',status===429?429:502,e?.response?.headers?.['retry-after']);}
+export function decimalString(units:bigint,decimals:number){if(!Number.isInteger(decimals)||decimals<0||decimals>255||units<0n)throw new CryptoError('invalid_provider_response',502);const s=units.toString().padStart(decimals+1,'0');return decimals?s.slice(0,-decimals)+'.'+s.slice(-decimals):s;}
+export async function bounded<T>(request:Promise<T>,ms=18000):Promise<T>{let timer:ReturnType<typeof setTimeout>|undefined;try{return await Promise.race([request,new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(new CryptoError('provider_unavailable',502)),ms)})]);}finally{if(timer)clearTimeout(timer)}}

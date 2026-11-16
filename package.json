@@ -1,5 +1,5 @@
 {
-  "name": "wallet-setup",
+  "name": "flux",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -7,15 +7,19 @@
     "build": "next build",
     "start": "next start --hostname 0.0.0.0",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test tests/*.test.ts"
+    "test": "node --import tsx --test tests/*.test.ts"
   },
   "dependencies": {
+    "@coinbase/cdp-sdk": "^1.62.0",
+    "@crossmint/wallets-sdk": "1.0.7",
     "@electric-sql/pglite": "^0.5.16",
     "@radix-ui/react-slot": "^1.1.0",
+    "@stripe/link-sdk": "^3.1.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.468.0",
     "next": "^15.3.0",
+    "next-auth": "5.0.0-beta.32",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "tailwind-merge": "^3.0.0",
@@ -29,5 +33,6 @@
     "tailwindcss": "^4.0.0",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0"
-  }
+  },
+  "type": "module"
 }
