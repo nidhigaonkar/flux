@@ -10,6 +10,6 @@ export function demoResult(agentId:string, provider:Provider) {
  const hex=hash.toString(16).padStart(8,'0');
  return {provider, kind:provider==='link'?'linked_payment_account':'crypto_wallet', providerAccountId:`demo_${provider}_${agentId}`,address:provider==='link'?null:`0x${hex.repeat(5)}`,network:provider==='link'?null:'base-sepolia',environment:provider==='link'?'demo':provider==='crossmint'?'staging':'testnet',mode:'demo',status:'connected',balance:provider==='link'?'0.00':provider==='coinbase'?'125.00':'50.00'};
 }
-export function safeConfig(agent:{id:string;name:string;mode:string;wallets: Array<{provider:string;kind:string;providerAccountId:string;address:string|null;network:string|null;environment:string;status:string}>}) {
- return {schemaVersion:'1.0',agent:{id:agent.id,name:agent.name},mode:agent.mode,simulated:agent.mode==='demo',authorizesSpending:false,providers:agent.wallets.map(w=>({provider:w.provider,kind:w.kind,accountId:w.providerAccountId,address:w.address,network:w.network,environment:w.environment,status:w.status}))};
+export function safeConfig(agent:{id:string;name:string;mode:string;wallets: Array<{provider:string;kind:string;providerAccountId:string;address:string|null;network:string|null;environment:string;status:string;ownership?:string}>}) {
+ return {schemaVersion:'1.0',agent:{id:agent.id,name:agent.name},mode:agent.mode,simulated:agent.mode==='demo',authorizesSpending:false,providers:agent.wallets.map(w=>({provider:w.provider,kind:w.kind,accountId:w.providerAccountId,address:w.address,network:w.network,environment:w.environment,status:w.status,...(w.ownership?{ownership:w.ownership}:{})}))};
 }

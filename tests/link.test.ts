@@ -2,11 +2,11 @@ import {test,after} from 'node:test';
 import assert from 'node:assert/strict';
 import {randomBytes} from 'node:crypto';
 import {database,createAgent,attachWallet,getAgent,listWorkspaceWallets} from '../lib/db';
-import {config,encrypt,decrypt,hash,LinkError,missingConfiguration} from '../lib/link/config';
+import {config,encrypt,decrypt,hash,missingConfiguration} from '../lib/link/config';
 import {authorizationUrl} from '../lib/link/oauth';
 import {beginAuthorization,completeAuthorization,currentAccessToken,disconnectAccount,safeAccounts,syncAccount} from '../lib/link/service';
 import {GET as status} from '../app/api/link/status/route';
-Object.assign(process.env,{DATABASE_PATH:'memory://',AUTH_URL:'http://localhost:3000',AUTH_SECRET:'test-only-secret-that-is-at-least-32-characters',AUTH_GITHUB_ID:'test-github',AUTH_GITHUB_SECRET:'test-github-secret',ENCRYPTION_KEY:randomBytes(32).toString('hex'),LINK_CLIENT_ID:'test-client',LINK_CLIENT_SECRET:'test-secret',LINK_PUBLISHABLE_KEY:'pk_test_example',LINK_REDIRECT_URI:'http://localhost:3000/api/link/callback',NODE_ENV:'test'});
+Object.assign(process.env,{DATABASE_PATH:'memory://',AUTH_URL:'http://localhost:3000',AUTH_SECRET:'test-only-secret-that-is-at-least-32-characters',ENCRYPTION_KEY:randomBytes(32).toString('hex'),LINK_CLIENT_ID:'test-client',LINK_CLIENT_SECRET:'test-secret',LINK_PUBLISHABLE_KEY:'pk_test_example',LINK_REDIRECT_URI:'http://localhost:3000/api/link/callback',NODE_ENV:'test'});
 after(async()=>{await (await database()).close()});
 const token=(suffix:string)=>({access_token:`access-${suffix}`,refresh_token:`refresh-${suffix}`,token_type:'Bearer',expires_in:3600,scope:'payment_methods.agentic'});
 const response=(data:unknown,status=200)=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json'}});
@@ -50,4 +50,4 @@ test('missing granted scope never creates a connected record',async()=>{
  const flow=await beginAuthorization('scope-owner');await assert.rejects(completeAuthorization('scope-owner',new URL(flow.url).searchParams.get('state')!,flow.browser,'code',false,(async()=>response({...token('scope'),scope:'userinfo:read'})) as typeof fetch),/required_scope_missing/);assert.equal((await safeAccounts('scope-owner')).length,0);
 });
 
-test('public settings expose missing variable names but never credentials or tokens',async()=>{const saved=process.env.AUTH_GITHUB_ID;delete process.env.AUTH_GITHUB_ID;try{const r=await status();const body=await r.json();assert.equal(body.authenticated,false);assert.equal(body.configured,false);assert.ok(body.missing.includes('AUTH_GITHUB_ID'));assert.deepEqual(body.accounts,[]);assert.ok(!JSON.stringify(body).includes(process.env.LINK_CLIENT_SECRET!));assert.ok(!JSON.stringify(body).includes(process.env.ENCRYPTION_KEY!));}finally{process.env.AUTH_GITHUB_ID=saved;}});
+test('public settings expose missing variable names but never credentials or tokens',async()=>{const saved=process.env.AUTH_SECRET;delete process.env.AUTH_SECRET;try{const r=await status();const body=await r.json();assert.equal(body.authenticated,false);assert.equal(body.configured,false);assert.ok(body.missing.includes('AUTH_SECRET'));assert.deepEqual(body.accounts,[]);assert.ok(!JSON.stringify(body).includes(process.env.LINK_CLIENT_SECRET!));assert.ok(!JSON.stringify(body).includes(process.env.ENCRYPTION_KEY!));}finally{process.env.AUTH_SECRET=saved;}});
